@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ใจเบา · พื้นที่ดูแลใจ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-top:#dbe6ef;
+    --bg-bottom:#eef2f6;
+    --surface:#ffffff;
+    --surface-soft:#f3f7fa;
+    --primary:#4a6fa5;
+    --primary-dark:#2e4c73;
+    --accent:#8fb8da;
+    --accent-soft:#dbe9f4;
+    --text:#2c3947;
+    --muted:#71869b;
+    --border:#dde6ee;
+    --danger:#c97575;
+    --success:#5f9e82;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    --shadow:0 8px 24px rgba(46,76,115,0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Sarabun',sans-serif;
+    color:var(--text);
+    background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 45%, var(--bg-bottom) 100%);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{max-width:520px;margin:0 auto;min-height:100vh;padding:0 0 48px 0;position:relative;}
+  h1,h2,h3,.display{font-family:'Prompt',sans-serif;}
+  button{font-family:'Sarabun',sans-serif;cursor:pointer;}
+  ::selection{background:var(--accent-soft);}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    padding:38px 24px 28px 24px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .breath-wrap{
+    width:96px;height:96px;margin:0 auto 18px auto;
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+  }
+  .breath-ring{
+    position:absolute;inset:0;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffffff, var(--accent) 60%, var(--primary) 100%);
+    animation:breathe 5s ease-in-out infinite;
+    box-shadow:0 10px 30px rgba(74,111,165,0.35);
+  }
+  @keyframes breathe{
+    0%,100%{transform:scale(0.86);opacity:0.85;}
+    50%{transform:scale(1.08);opacity:1;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .breath-ring{animation:none;}
+  }
+  .hero h1{font-size:28px;font-weight:700;color:var(--primary-dark);margin:0 0 6px 0;letter-spacing:0.5px;}
+  .hero p{margin:0;color:var(--muted);font-size:14.5px;}
+
+  /* ---------- Section ---------- */
+  .section{padding:6px 20px 0 20px;}
+  .eyebrow{
+    font-family:'Prompt',sans-serif;
+    font-size:12.5px;font-weight:600;letter-spacing:1.6px;
+    color:var(--primary);text-transform:uppercase;
+    margin:22px 4px 12px 4px;
+  }
+
+  /* ---------- Cards ---------- */
+  .card-list{display:flex;flex-direction:column;gap:10px;}
+  .item-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    padding:16px 16px;
+    display:flex;align-items:center;gap:14px;
+    box-shadow:var(--shadow);
+    transition:transform .15s ease, box-shadow .15s ease;
+    text-align:left;width:100%;
+  }
+  .item-card:active{transform:scale(0.98);}
+  .item-icon{
+    width:44px;height:44px;border-radius:12px;
+    background:var(--accent-soft);
+    display:flex;align-items:center;justify-content:center;
+    font-size:21px;flex-shrink:0;
+  }
+  .item-body{flex:1;min-width:0;}
+  .item-title{font-family:'Prompt',sans-serif;font-weight:600;font-size:15.5px;color:var(--text);margin:0 0 2px 0;}
+  .item-desc{font-size:12.8px;color:var(--muted);margin:0;line-height:1.4;}
+  .item-chevron{color:var(--accent);font-size:18px;flex-shrink:0;}
+
+  /* ---------- Generic view ---------- */
+  .view{padding:18px 20px 8px 20px;}
+  .back-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    background:none;border:none;color:var(--primary);
+    font-size:14px;font-weight:500;padding:8px 4px;margin-bottom:8px;
+  }
+  .view-title{font-size:21px;font-weight:700;color:var(--primary-dark);margin:2px 0 4px 0;}
+  .view-sub{font-size:13px;color:var(--muted);margin:0 0 20px 0;line-height:1.5;}
+
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:20px;
+    box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .btn{
+    border:none;border-radius:var(--radius-sm);
+    padding:12px 18px;font-size:14.5px;font-weight:600;font-family:'Sarabun',sans-serif;
+    width:100%;
+  }
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:active{background:var(--primary-dark);}
+  .btn-outline{background:transparent;color:var(--primary);border:1.5px solid var(--primary);}
+  .btn-soft{background:var(--accent-soft);color:var(--primary-dark);}
+  .btn:disabled{opacity:0.45;}
+  .input{
+    width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+    padding:11px 14px;font-size:14.5px;font-family:'Sarabun',sans-serif;color:var(--text);
+    background:var(--surface-soft);
+  }
+  .input:focus{outline:none;border-color:var(--accent);}
+  .row{display:flex;gap:10px;}
+  .row>*{flex:1;}
+  .muted-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+
+  /* players / lobby */
+  .player-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--accent-soft);color:var(--primary-dark);
+    border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500;margin:3px 4px 3px 0;
+  }
+  .room-code{
+    font-family:'Prompt',sans-serif;font-size:26px;font-weight:700;letter-spacing:4px;
+    color:var(--primary-dark);text-align:center;margin:6px 0 14px 0;
+  }
+
+  /* board game grid */
+  .board-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+  .board-card{
+    aspect-ratio:1/1;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;background:var(--primary);color:transparent;
+    border:none;transition:transform .12s ease;
+  }
+  .board-card.open{background:var(--surface);color:var(--text);border:1.5px solid var(--accent);}
+  .board-card.matched{background:var(--success);color:#fff;opacity:0.55;}
+  .board-card:active{transform:scale(0.94);}
+  .score-strip{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .score-chip{
+    background:var(--surface-soft);border:1px solid var(--border);border-radius:999px;
+    padding:5px 12px;font-size:12.5px;color:var(--text);
+  }
+  .score-chip.me{border-color:var(--primary);color:var(--primary-dark);font-weight:600;}
+
+  /* chat */
+  .chat-window{
+    height:340px;overflow-y:auto;background:var(--surface-soft);
+    border-radius:var(--radius-md);padding:14px;margin-bottom:12px;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .msg{max-width:78%;padding:9px 13px;border-radius:14px;font-size:14px;line-height:1.4;}
+  .msg.me{align-self:flex-end;background:var(--primary);color:#fff;border-bottom-right-radius:4px;}
+  .msg.them{align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px;}
+  .msg.sys{align-self:center;background:transparent;color:var(--muted);font-size:12px;}
+
+  /* vent */
+  textarea.input{resize:vertical;min-height:120px;font-family:'Sarabun',sans-serif;line-height:1.6;}
+  .entry{
+    background:var(--surface-soft);border:1px solid var(--border);border-radius:var(--radius-md);
+    padding:13px 15px;margin-bottom:10px;
+  }
+  .entry-time{font-size:11.5px;color:var(--muted);margin-bottom:5px;}
+  .entry-text{font-size:14px;line-height:1.55;white-space:pre-wrap;}
+  .empty-note{text-align:center;color:var(--muted);font-size:13.5px;padding:30px 10px;}
+
+  .spinner-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--primary);margin:0 2px;animation:blink 1.3s infinite;}
+  .spinner-dot:nth-child(2){animation-delay:.2s;}
+  .spinner-dot:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.2;}40%{opacity:1;}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============ storage helpers ============ */
+async function sGet(key, shared){ try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }catch(e){ return null; } }
+async function sSet(key, value, shared){ try{ await window.storage.set(key, value, !!shared); return true; }catch(e){ return false; } }
+async function sDel(key, shared){ try{ await window.storage.delete(key, !!shared); }catch(e){} }
+async function sList(prefix, shared){ try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }catch(e){ return []; } }
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function roomCode(){ const s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c=''; for(let i=0;i<4;i++) c+=s[Math.floor(Math.random()*s.length)]; return c; }
+function nowStr(){
+  const d=new Date();
+  return d.toLocaleString('th-TH',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+/* ============ app state ============ */
+let ME_ID=null, ME_NAME=null;
+let view='home';
+let pollTimer=null;
+let currentRoomCode=null;
+let currentChatCode=null;
+let ventShowList=false;
+
+async function ensureIdentity(){
+  let id = await sGet('user_id', false);
+  if(!id){ id = uid(); await sSet('user_id', id, false); }
+  ME_ID = id;
+  let name = await sGet('nickname', false);
+  ME_NAME = name;
+}
+
+/* ============ render root ============ */
+async function render(){
+  const app = document.getElementById('app');
+  if(view==='home') app.innerHTML = renderHome();
+  else if(view==='boardgame') app.innerHTML = await renderBoardGameEntry();
+  else if(view==='boardroom') app.innerHTML = await renderBoardRoom();
+  else if(view==='chat') app.innerHTML = await renderChatEntry();
+  else if(view==='chatroom') app.innerHTML = await renderChatRoom();
+  else if(view==='vent') app.innerHTML = await renderVent();
+  bindEvents();
+}
+
+function goto(v){ view=v; if(pollTimer){clearInterval(pollTimer);pollTimer=null;} render(); }
+
+/* ============ HOME ============ */
+function renderHome(){
+  return `
+  <div class="hero">
+    <div class="breath-wrap"><div class="breath-ring"></div></div>
+    <h1>ผ่อนคลาย</h1>
+    <p>พื้นที่เล็ก ๆ ที่ตั้งใจดูแลใจของคุณ<br/>ไม่ต้องรีบ ไม่ต้องเก่ง แค่มาอยู่ตรงนี้ก็พอ</p>
+  </div>
+  <div class="section">
+    <div class="eyebrow">ข้อมูลของฉัน</div>
+    <div class="card-list">
+      <button class="item-card" data-action="ext" data-url="https://share.google/KdT7KIZI1xtATXECF">
+        <div class="item-icon">🧠</div>
+        <div class="item-body">
+          <p class="item-title">แบบทดสอบวัดความซึมเศร้า</p>
+          <p class="item-desc">ประเมินสภาวะใจเบื้องต้น · Source: สุขภาพใจ.com</p>
+        </div>
+        <div class="item-chevron">›</div>
+      </button>
+
+      <button class="item-card" data-action="ext" data-url="https://share.google/ZhRFy9UVYOg2fsnJW">
+        <div class="item-icon">😊</div>
+        <div class="item-body">
+          <p class="item-title">TSU Smile</p>
+          <p class="item-desc">แบบประเมินความสุข · Source: มหาวิทยาลัยทักษิณ</p>
+        </div>
+        <div class="item-chevron">›</div>
+      </button>
+
+      <button class="item-card" data-action="nav" data-view="boardgame">
+        <div class="item-icon">🎲</div>
+        <div class="item-body">
+          <p class="item-title">บอร์ดเกม</p>
+          <p class="item-desc">จับคู่เล่นเกมความจำกับเพื่อนออนไลน์ สูงสุด 4 คน</p>
+        </div>
+        <div class="item-chevron">›</div>
+      </button>
+
+      <button class="item-card" data-action="nav" data-view="chat">
+        <div class="item-icon">💬</div>
+        <div class="item-body">
+          <p class="item-title">คุยกับเพื่อน</p>
+          <p class="item-desc">จับคู่พูดคุยแบบส่วนตัว 1 ต่อ 1 นิรนาม</p>
+        </div>
+        <div class="item-chevron">›</div>
+      </button>
+
+      <button class="item-card" data-action="nav" data-view="vent">
+        <div class="item-icon">📝</div>
+        <div class="item-body">
+          <p class="item-title">พื้นที่ระบาย</p>
+          <p class="item-desc">เขียนระบายความในใจ และย้อนอ่านสิ่งที่เคยเขียน</p>
+        </div>
+        <div class="item-chevron">›</div>
+      </button>
+    </div>
+  </div>`;
+}
+
+/* ============ BOARD GAME: lobby entry ============ */
+async function renderBoardGameEntry(){
+  return `
+  <div class="view">
+    <button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button>
+    <h2 class="view-title">🎲 บอร์ดเกม</h2>
+    <p class="view-sub">เกมจับคู่ความจำ เล่นพร้อมกันได้สูงสุด 4 คน แบบออนไลน์</p>
+
+    <div class="panel">
+      <label style="font-size:13px;color:var(--muted);">ชื่อที่ใช้แสดงในเกม</label>
+      <input class="input" id="nickname-input" placeholder="เช่น ฟ้าใส" value="${ME_NAME||''}" style="margin-top:6px;margin-bottom:14px;"/>
+      <button class="btn btn-primary" data-action="bg-quickmatch">🔀 สุ่มจับคู่ห้องที่ว่าง</button>
+      <div class="row" style="margin-top:10px;">
+        <input class="input" id="bg-code-input" placeholder="กรอกรหัสห้อง (ถ้ามี)" style="text-transform:uppercase;"/>
+        <button class="btn btn-outline" data-action="bg-joincode" style="flex:0 0 100px;">เข้าร่วม</button>
+      </div>
+      <p class="muted-note">ระบบจะจับคู่คุณกับผู้เล่นคนอื่นที่กำลังรอ หรือสร้างห้องใหม่ให้อัตโนมัติ</p>
+    </div>
+  </div>`;
+}
+
+async function bgQuickMatch(){
+  const nick = document.getElementById('nickname-input').value.trim() || 'เพื่อนใหม่';
+  ME_NAME = nick; await sSet('nickname', nick, false);
+
+  const keys = await sList('room_', true);
+  let joined=null;
+  for(const k of keys){
+    const raw = await sGet(k, true);
+    if(!raw) continue;
+    let room; try{ room=JSON.parse(raw); }catch(e){ continue; }
+    if(room.status==='waiting' && room.players.length<4 && !room.players.find(p=>p.id===ME_ID)){
+      room.players.push({id:ME_ID, name:nick, score:0});
+      await sSet(k, JSON.stringify(room), true);
+      joined = room.code;
+      break;
+    }
+  }
+  if(!joined){
+    joined = roomCode();
+    const values=[]; for(let i=0;i<8;i++){values.push(i,i);}
+    values.sort(()=>Math.random()-0.5);
+    const cards = values.map(v=>({value:v, matchedBy:null}));
+    const room = { code:joined, createdAt:Date.now(), status:'waiting',
+      players:[{id:ME_ID, name:nick, score:0}], cards, flipped:[] };
+    await sSet('room_'+joined, JSON.stringify(room), true);
+  }
+  currentRoomCode = joined;
+  goto('boardroom');
+}
+
+async function bgJoinCode(){
+  const nick = document.getElementById('nickname-input').value.trim() || 'เพื่อนใหม่';
+  const code = document.getElementById('bg-code-input').value.trim().toUpperCase();
+  if(!code) return;
+  ME_NAME = nick; await sSet('nickname', nick, false);
+  const key='room_'+code;
+  const raw = await sGet(key, true);
+  if(!raw){ alert('ไม่พบห้องนี้'); return; }
+  let room = JSON.parse(raw);
+  if(!room.players.find(p=>p.id===ME_ID) && room.players.length<4){
+    room.players.push({id:ME_ID,name:nick,score:0});
+    await sSet(key, JSON.stringify(room), true);
+  }
+  currentRoomCode = code;
+  goto('boardroom');
+}
+
+/* ============ BOARD GAME: room ============ */
+async function renderBoardRoom(){
+  const raw = await sGet('room_'+currentRoomCode, true);
+  if(!raw) return `<div class="view"><button class="back-btn" data-action="nav" data-view="boardgame">← กลับ</button><p class="empty-note">ห้องนี้ถูกปิดไปแล้ว</p></div>`;
+  const room = JSON.parse(raw);
+
+  if(!pollTimer){ pollTimer = setInterval(()=>{ if(view==='boardroom') render(); }, 1800); }
+
+  if(room.status==='waiting'){
+    return `
+    <div class="view">
+      <button class="back-btn" data-action="bg-leave">← ออกจากห้อง</button>
+      <h2 class="view-title">ห้องรอผู้เล่น</h2>
+      <div class="panel">
+        <div class="room-code">${room.code}</div>
+        <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:-6px;">แชร์รหัสนี้ให้เพื่อน หรือรอระบบจับคู่ให้</p>
+        <div style="margin:16px 0 4px 0;">
+          ${room.players.map(p=>`<span class="player-pill">🙂 ${p.name}${p.id===ME_ID?' (คุณ)':''}</span>`).join('')}
+        </div>
+        <p class="muted-note">รอผู้เล่น… <span class="spinner-dot"></span><span class="spinner-dot"></span><span class="spinner-dot"></span> (${room.players.length}/4)</p>
+        <button class="btn btn-primary" style="margin-top:14px;" data-action="bg-start" ${room.players.length<2?'disabled':''}>เริ่มเกม (${room.players.length}/4 คน)</button>
+      </div>
+    </div>`;
+  }
+
+  // playing or finished
+  const allMatched = room.cards.every(c=>c.matchedBy);
+  const symbols=['🌤️','🌊','🌿','🍃','🌙','⭐','🌸','🍀'];
+  return `
+  <div class="view">
+    <button class="back-btn" data-action="bg-leave">← ออกจากห้อง</button>
+    <h2 class="view-title">🎲 ห้อง ${room.code}</h2>
+    <div class="score-strip">
+      ${room.players.map(p=>`<span class="score-chip ${p.id===ME_ID?'me':''}">${p.name}: ${p.score}★</span>`).join('')}
+    </div>
+    ${allMatched ? `<div class="panel" style="text-align:center;"><p style="font-family:Prompt;font-weight:600;font-size:17px;color:var(--primary-dark);">🎉 จบเกมแล้ว!</p><p class="view-sub" style="margin:6px 0 0 0;">ผู้ชนะ: ${[...room.players].sort((a,b)=>b.score-a.score)[0].name}</p><button class="btn btn-soft" style="margin-top:10px;" data-action="nav" data-view="boardgame">เล่นห้องใหม่</button></div>` : ''}
+    <div class="board-grid">
+      ${room.cards.map((c,i)=>{
+        const isFlipped = room.flipped.find(f=>f.index===i);
+        const open = c.matchedBy || isFlipped;
+        const cls = c.matchedBy ? 'matched' : (isFlipped ? 'open':'');
+        return `<button class="board-card ${cls}" data-action="bg-flip" data-idx="${i}" ${(c.matchedBy||room.flipped.length>=2)?'':''}>${open?symbols[c.value]:''}</button>`;
+      }).join('')}
+    </div>
+    <p class="muted-note">แตะการ์ดเพื่อเปิด จับคู่สัญลักษณ์ให้ตรงกันเพื่อได้คะแนน</p>
+  </div>`;
+}
+
+async function bgStart(){
+  const raw = await sGet('room_'+currentRoomCode, true);
+  if(!raw) return;
+  const room = JSON.parse(raw);
+  room.status='playing';
+  await sSet('room_'+currentRoomCode, JSON.stringify(room), true);
+  render();
+}
+
+async function bgFlip(idx){
+  const raw = await sGet('room_'+currentRoomCode, true);
+  if(!raw) return;
+  const room = JSON.parse(raw);
+  if(room.status!=='playing') return;
+  const card = room.cards[idx];
+  if(card.matchedBy) return;
+  if(room.flipped.find(f=>f.index===idx)) return;
+  if(room.flipped.length>=2) return;
+
+  room.flipped.push({index:idx, time:Date.now()});
+  await sSet('room_'+currentRoomCode, JSON.stringify(room), true);
+  render();
+
+  if(room.flipped.length===2){
+    const [a,b] = room.flipped;
+    if(room.cards[a.index].value === room.cards[b.index].value){
+      room.cards[a.index].matchedBy = ME_ID;
+      room.cards[b.index].matchedBy = ME_ID;
+      room.flipped = [];
+      const me = room.players.find(p=>p.id===ME_ID);
+      if(me) me.score += 1;
+      await sSet('room_'+currentRoomCode, JSON.stringify(room), true);
+      render();
+    } else {
+      setTimeout(async ()=>{
+        const raw2 = await sGet('room_'+currentRoomCode, true);
+        if(!raw2) return;
+        const room2 = JSON.parse(raw2);
+        if(room2.flipped.length===2 && room2.flipped[0].index===a.index && room2.flipped[1].index===b.index){
+          room2.flipped = [];
+          await sSet('room_'+currentRoomCode, JSON.stringify(room2), true);
+        }
+        if(view==='boardroom') render();
+      }, 1100);
+    }
+  }
+}
+
+async function bgLeave(){
+  const raw = await sGet('room_'+currentRoomCode, true);
+  if(raw){
+    const room = JSON.parse(raw);
+    room.players = room.players.filter(p=>p.id!==ME_ID);
+    if(room.players.length===0){ await sDel('room_'+currentRoomCode, true); }
+    else{ await sSet('room_'+currentRoomCode, JSON.stringify(room), true); }
+  }
+  currentRoomCode=null;
+  goto('boardgame');
+}
+
+/* ============ CHAT: entry / matching ============ */
+async function renderChatEntry(){
+  const waitingKey = 'chatwait_'+ME_ID;
+  const raw = await sGet(waitingKey, true);
+  if(raw){
+    let w; try{ w=JSON.parse(raw); }catch(e){ w=null; }
+    if(w && w.status==='matched' && w.roomCode){
+      await sDel(waitingKey, true);
+      currentChatCode = w.roomCode;
+      goto('chatroom');
+      return renderChatRoom();
+    }
+    if(w && w.status==='waiting'){
+      if(!pollTimer){ pollTimer=setInterval(()=>{ if(view==='chat') render(); }, 1800); }
+      return `
+      <div class="view">
+        <button class="back-btn" data-action="chat-cancel">← ยกเลิกและกลับหน้าหลัก</button>
+        <h2 class="view-title">💬 คุยกับเพื่อน</h2>
+        <div class="panel" style="text-align:center;">
+          <p style="font-family:Prompt;font-weight:600;">กำลังหาคู่สนทนา…</p>
+          <p class="muted-note" style="margin-top:6px;">โปรดรอสักครู่ <span class="spinner-dot"></span><span class="spinner-dot"></span><span class="spinner-dot"></span></p>
+        </div>
+      </div>`;
+    }
+  }
+  return `
+  <div class="view">
+    <button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button>
+    <h2 class="view-title">💬 คุยกับเพื่อน</h2>
+    <p class="view-sub">จับคู่พูดคุยกับใครสักคนแบบนิรนาม 1 ต่อ 1 ไม่มีการเก็บชื่อจริง</p>
+    <div class="panel">
+      <label style="font-size:13px;color:var(--muted);">ชื่อที่อยากให้อีกฝ่ายเห็น</label>
+      <input class="input" id="chat-nick-input" placeholder="เช่น คนแปลกหน้าใจดี" value="${ME_NAME||''}" style="margin-top:6px;margin-bottom:14px;"/>
+      <button class="btn btn-primary" data-action="chat-find">🔍 หาคู่สนทนา</button>
+      <p class="muted-note">หากไม่มีใครกำลังรออยู่ ระบบจะสร้างห้องรอให้คุณ และจับคู่ให้ทันทีที่มีคนเข้ามา</p>
+    </div>
+  </div>`;
+}
+
+async function chatFind(){
+  const nick = document.getElementById('chat-nick-input').value.trim() || 'เพื่อนนิรนาม';
+  ME_NAME = nick; await sSet('nickname', nick, false);
+
+  const keys = await sList('chatwait_', true);
+  let partnerKey=null, partnerData=null;
+  for(const k of keys){
+    if(k === 'chatwait_'+ME_ID) continue;
+    const raw = await sGet(k, true);
+    if(!raw) continue;
+    let w; try{ w=JSON.parse(raw); }catch(e){ continue; }
+    if(w.status==='waiting'){ partnerKey=k; partnerData=w; break; }
+  }
+
+  if(partnerData){
+    const code = roomCode();
+    const room = { code, messages:[{sender:'sys', text:'เริ่มบทสนทนาแล้ว กล่าวทักทายกันได้เลย 🙂', time:Date.now()}],
+      players:[{id:partnerData.id, name:partnerData.name},{id:ME_ID, name:nick}] };
+    await sSet('chatroom_'+code, JSON.stringify(room), true);
+    partnerData.status='matched'; partnerData.roomCode=code;
+    await sSet(partnerKey, JSON.stringify(partnerData), true);
+    await sDel('chatwait_'+ME_ID, true);
+    currentChatCode = code;
+    goto('chatroom');
+  } else {
+    const w = {id:ME_ID, name:nick, status:'waiting', roomCode:null};
+    await sSet('chatwait_'+ME_ID, JSON.stringify(w), true);
+    render();
+  }
+}
+
+async function chatCancel(){
+  await sDel('chatwait_'+ME_ID, true);
+  goto('home');
+}
+
+/* ============ CHAT: room ============ */
+async function renderChatRoom(){
+  const raw = await sGet('chatroom_'+currentChatCode, true);
+  if(!raw) return `<div class="view"><button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button><p class="empty-note">บทสนทนานี้สิ้นสุดแล้ว</p></div>`;
+  const room = JSON.parse(raw);
+  if(!pollTimer){ pollTimer=setInterval(()=>{ if(view==='chatroom') render(); }, 1600); }
+  const partner = room.players.find(p=>p.id!==ME_ID);
+
+  return `
+  <div class="view">
+    <button class="back-btn" data-action="chat-leave">← ออกจากบทสนทนา</button>
+    <h2 class="view-title">💬 คุยกับ ${partner?partner.name:'เพื่อน'}</h2>
+    <div class="chat-window" id="chat-window">
+      ${room.messages.map(m=>{
+        if(m.sender==='sys') return `<div class="msg sys">${escapeHtml(m.text)}</div>`;
+        return `<div class="msg ${m.sender===ME_ID?'me':'them'}">${escapeHtml(m.text)}</div>`;
+      }).join('')}
+    </div>
+    <div class="row">
+      <input class="input" id="chat-msg-input" placeholder="พิมพ์ข้อความ…"/>
+      <button class="btn btn-primary" data-action="chat-send" style="flex:0 0 84px;">ส่ง</button>
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s){ const d=document.createElement('div'); d.innerText=s; return d.innerHTML; }
+
+async function chatSend(){
+  const input = document.getElementById('chat-msg-input');
+  const text = input.value.trim();
+  if(!text) return;
+  const raw = await sGet('chatroom_'+currentChatCode, true);
+  if(!raw) return;
+  const room = JSON.parse(raw);
+  room.messages.push({sender:ME_ID, text, time:Date.now()});
+  await sSet('chatroom_'+currentChatCode, JSON.stringify(room), true);
+  input.value='';
+  render();
+  setTimeout(()=>{ const w=document.getElementById('chat-window'); if(w) w.scrollTop=w.scrollHeight; }, 30);
+}
+
+async function chatLeave(){
+  currentChatCode=null;
+  goto('home');
+}
+
+/* ============ VENT SPACE ============ */
+async function renderVent(){
+  const raw = await sGet('vent_entries', false);
+  let entries = [];
+  if(raw){ try{ entries=JSON.parse(raw); }catch(e){ entries=[]; } }
+  entries = entries.slice().reverse();
+
+  return `
+  <div class="view">
+    <button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button>
+    <h2 class="view-title">📝 พื้นที่ระบาย</h2>
+    <p class="view-sub">เขียนสิ่งที่อยู่ในใจได้อย่างอิสระ ข้อความนี้เก็บไว้เป็นส่วนตัวสำหรับคุณเท่านั้น</p>
+
+    ${!ventShowList ? `
+    <div class="panel">
+      <textarea class="input" id="vent-text" placeholder="วันนี้เป็นยังไงบ้าง…"></textarea>
+      <button class="btn btn-primary" style="margin-top:12px;" data-action="vent-save">บันทึกข้อความ</button>
+      <button class="btn btn-soft" style="margin-top:8px;" data-action="vent-toggle">📖 อ่านข้อความที่เคยเขียน (${entries.length})</button>
+    </div>
+    ` : `
+    <button class="btn btn-outline" style="margin-bottom:14px;" data-action="vent-toggle">← กลับไปเขียนข้อความใหม่</button>
+    ${entries.length===0 ? `<p class="empty-note">ยังไม่มีข้อความที่บันทึกไว้</p>` :
+      entries.map(e=>`<div class="entry"><div class="entry-time">${e.time}</div><div class="entry-text">${escapeHtml(e.text)}</div></div>`).join('')}
+    `}
+  </div>`;
+}
+
+async function ventSave(){
+  const ta = document.getElementById('vent-text');
+  const text = ta.value.trim();
+  if(!text) return;
+  const raw = await sGet('vent_entries', false);
+  let entries = [];
+  if(raw){ try{ entries=JSON.parse(raw); }catch(e){ entries=[]; } }
+  entries.push({id:uid(), text, time:nowStr()});
+  await sSet('vent_entries', JSON.stringify(entries), false);
+  ta.value='';
+  ventShowList=true;
+  render();
+}
+
+/* ============ event binding ============ */
+function bindEvents(){
+  document.querySelectorAll('[data-action]').forEach(el=>{
+    el.onclick = async (e)=>{
+      const action = el.getAttribute('data-action');
+      if(action==='ext') window.open(el.getAttribute('data-url'), '_blank');
+      else if(action==='nav') goto(el.getAttribute('data-view'));
+      else if(action==='bg-quickmatch') bgQuickMatch();
+      else if(action==='bg-joincode') bgJoinCode();
+      else if(action==='bg-start') bgStart();
+      else if(action==='bg-flip') bgFlip(parseInt(el.getAttribute('data-idx')));
+      else if(action==='bg-leave') bgLeave();
+      else if(action==='chat-find') chatFind();
+      else if(action==='chat-cancel') chatCancel();
+      else if(action==='chat-send') chatSend();
+      else if(action==='chat-leave') chatLeave();
+      else if(action==='vent-save') ventSave();
+      else if(action==='vent-toggle'){ ventShowList=!ventShowList; render(); }
+    };
+  });
+  const chatInput = document.getElementById('chat-msg-input');
+  if(chatInput) chatInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') chatSend(); });
+}
+
+/* ============ init ============ */
+(async function init(){
+  await ensureIdentity();
+  render();
+})();
+</script>
+</body>
+</html>
