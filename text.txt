@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ใจเบา · พื้นที่ดูแลใจ</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4a6fa5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ใจเบา">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-top:#dbe6ef;
+    --bg-bottom:#eef2f6;
+    --surface:#ffffff;
+    --surface-soft:#f3f7fa;
+    --primary:#4a6fa5;
+    --primary-dark:#2e4c73;
+    --accent:#8fb8da;
+    --accent-soft:#dbe9f4;
+    --text:#2c3947;
+    --muted:#71869b;
+    --border:#dde6ee;
+    --danger:#c97575;
+    --success:#5f9e82;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-sm:10px;
+    --shadow:0 10px 28px rgba(46,76,115,0.10), 0 1px 2px rgba(46,76,115,0.06);
+    --glass:rgba(255,255,255,0.62);
+    --glass-border:rgba(255,255,255,0.7);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Sarabun',sans-serif;
+    color:var(--text);
+    background:linear-gradient(180deg,var(--bg-top) 0%, var(--bg-bottom) 45%, var(--bg-bottom) 100%);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  /* ---------- Ambient background blobs (gimmick, gpu-only transforms) ---------- */
+  .bg-blob{
+    position:fixed; border-radius:50%; filter:blur(60px);
+    pointer-events:none; z-index:0; will-change:transform;
+  }
+  .bg-blob.b1{
+    width:340px;height:340px; top:-120px; left:-90px;
+    background:radial-gradient(circle, rgba(143,184,218,0.55), rgba(143,184,218,0) 70%);
+    animation:driftA 16s ease-in-out infinite alternate;
+  }
+  .bg-blob.b2{
