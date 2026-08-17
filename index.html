@@ -211,6 +211,7 @@
 <!-- Firebase (Realtime Database) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyDLyigr0Vp2TUT4P_vqN3L27s8EfRLwknM",
@@ -255,10 +256,21 @@ let ventShowList=false;
 let lastError=null;
 
 function ensureIdentity(){
-  let id = lGet('user_id');
-  if(!id){ id = uid(); lSet('user_id', id); }
-  ME_ID = id;
   ME_NAME = lGet('nickname');
+  return new Promise((resolve)=>{
+    firebase.auth().onAuthStateChanged((user)=>{
+      if(user){
+        ME_ID = user.uid;
+        resolve();
+      } else {
+        firebase.auth().signInAnonymously().catch((e)=>{
+          console.error('anonymous sign-in failed', e);
+          lastError = 'เชื่อมต่อระบบยืนยันตัวตนไม่สำเร็จ ลองรีเฟรชหน้าเว็บ';
+          resolve();
+        });
+      }
+    });
+  });
 }
 
 /* ============ render root ============ */
@@ -346,11 +358,20 @@ async function renderBoardGameEntry(){
       <label style="font-size:13px;color:var(--muted);">ชื่อที่ใช้แสดงในเกม</label>
       <input class="input" id="nickname-input" placeholder="เช่น ฟ้าใส" value="${ME_NAME||''}" style="margin-top:6px;margin-bottom:14px;"/>
       <button class="btn btn-primary" data-action="bg-quickmatch">🔀 สุ่มจับคู่ห้องที่ว่าง</button>
-      <div class="row" style="margin-top:10px;">
+
+      <div style="text-align:center;color:var(--muted);font-size:12px;margin:16px 0 12px 0;">— หรือ —</div>
+
+      <label style="font-size:13px;color:var(--muted);">ตั้งชื่อห้อง (ถ้าไม่ใส่ จะใช้ชื่อของคุณแทน)</label>
+      <input class="input" id="bg-roomname-input" placeholder="เช่น ห้องเพื่อนซี้" style="margin-top:6px;margin-bottom:10px;"/>
+      <label style="font-size:13px;color:var(--muted);">ตั้งรหัสห้องเอง (ถ้าไม่ใส่ ระบบจะสุ่มให้)</label>
+      <input class="input" id="bg-customcode-input" placeholder="เช่น FUN1" maxlength="8" style="text-transform:uppercase;margin-top:6px;margin-bottom:12px;"/>
+      <button class="btn btn-outline" data-action="bg-createroom">➕ สร้างห้องใหม่</button>
+
+      <div class="row" style="margin-top:14px;">
         <input class="input" id="bg-code-input" placeholder="กรอกรหัสห้อง (ถ้ามี)" style="text-transform:uppercase;"/>
         <button class="btn btn-outline" data-action="bg-joincode" style="flex:0 0 100px;">เข้าร่วม</button>
       </div>
-      <p class="muted-note">ระบบจะจับคู่คุณกับผู้เล่นคนอื่นที่กำลังรอ หรือสร้างห้องใหม่ให้อัตโนมัติ</p>
+      <p class="muted-note">ระบบจะจับคู่คุณกับผู้เล่นคนอื่นที่กำลังรอ หรือคุณสร้างห้องของตัวเองแล้วแชร์รหัสให้เพื่อนก็ได้</p>
       ${lastError?`<p class="error-note">${escapeHtml(lastError)}</p>`:''}
     </div>
   </div>`;
@@ -375,12 +396,49 @@ async function bgQuickMatch(){
     const values=[]; for(let i=0;i<8;i++){values.push(i,i);}
     values.sort(()=>Math.random()-0.5);
     const cards = values.map(v=>({value:v, matchedBy:null}));
-    const room = { code:joined, createdAt:Date.now(), status:'waiting',
-      players:{ [ME_ID]:{name:nick, score:0} }, cards, flipped:{} };
-    const ok = await fSet('rooms/'+joined, room);
+    // written field-by-field: security rules protect each field separately,
+    // and the player entry must exist before status/flipped (which require membership)
+    let ok = await fSet('rooms/'+joined+'/players/'+ME_ID, {name:nick, score:0});
+    ok = ok && await fSet('rooms/'+joined+'/code', joined);
+    ok = ok && await fSet('rooms/'+joined+'/createdAt', Date.now());
+    ok = ok && await fSet('rooms/'+joined+'/cards', cards);
+    ok = ok && await fSet('rooms/'+joined+'/status', 'waiting');
+    ok = ok && await fSet('rooms/'+joined+'/flipped', {});
     if(!ok){ lastError='เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง'; render(); return; }
   }
   currentRoomCode = joined;
+  goto('boardroom');
+}
+
+async function bgCreateRoom(){
+  const nick = document.getElementById('nickname-input').value.trim() || 'เพื่อนใหม่';
+  const roomNameInput = document.getElementById('bg-roomname-input').value.trim();
+  let code = document.getElementById('bg-customcode-input').value.trim().toUpperCase();
+  ME_NAME = nick; lSet('nickname', nick);
+
+  if(code){
+    if(!/^[A-Z0-9]{2,8}$/.test(code)){ lastError='รหัสห้องควรเป็นตัวอักษร A-Z หรือตัวเลข ยาว 2-8 ตัว'; render(); return; }
+    const existing = await fGet('rooms/'+code);
+    if(existing){ lastError='รหัสห้องนี้มีคนใช้แล้ว ลองรหัสอื่น'; render(); return; }
+  } else {
+    code = roomCode();
+  }
+  const roomName = roomNameInput || ('ห้องของ '+nick);
+
+  const values=[]; for(let i=0;i<8;i++){values.push(i,i);}
+  values.sort(()=>Math.random()-0.5);
+  const cards = values.map(v=>({value:v, matchedBy:null}));
+
+  let ok = await fSet('rooms/'+code+'/players/'+ME_ID, {name:nick, score:0});
+  ok = ok && await fSet('rooms/'+code+'/code', code);
+  ok = ok && await fSet('rooms/'+code+'/roomName', roomName);
+  ok = ok && await fSet('rooms/'+code+'/createdAt', Date.now());
+  ok = ok && await fSet('rooms/'+code+'/cards', cards);
+  ok = ok && await fSet('rooms/'+code+'/status', 'waiting');
+  ok = ok && await fSet('rooms/'+code+'/flipped', {});
+  if(!ok){ lastError='สร้างห้องไม่สำเร็จ ลองใหม่อีกครั้ง (รหัสห้องอาจถูกใช้ไปแล้ว)'; render(); return; }
+
+  currentRoomCode = code;
   goto('boardroom');
 }
 
@@ -413,7 +471,7 @@ async function renderBoardRoom(){
     return `
     <div class="view">
       <button class="back-btn" data-action="bg-leave">← ออกจากห้อง</button>
-      <h2 class="view-title">ห้องรอผู้เล่น</h2>
+      <h2 class="view-title">${room.roomName ? escapeHtml(room.roomName) : 'ห้องรอผู้เล่น'}</h2>
       <div class="panel">
         <div class="room-code">${room.code}</div>
         <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:-6px;">แชร์รหัสนี้ให้เพื่อน หรือรอระบบจับคู่ให้</p>
@@ -436,7 +494,7 @@ async function renderBoardRoom(){
   return `
   <div class="view">
     <button class="back-btn" data-action="bg-leave">← ออกจากห้อง</button>
-    <h2 class="view-title">🎲 ห้อง ${room.code}</h2>
+    <h2 class="view-title">🎲 ${room.roomName ? escapeHtml(room.roomName) : ('ห้อง '+room.code)}</h2>
     <div class="score-strip">
       ${playerIds.map(id=>`<span class="score-chip ${id===ME_ID?'me':''}">${escapeHtml(players[id].name)}: ${players[id].score||0}★</span>`).join('')}
     </div>
@@ -672,6 +730,7 @@ function bindEvents(){
       if(action==='ext') window.open(el.getAttribute('data-url'), '_blank');
       else if(action==='nav') goto(el.getAttribute('data-view'));
       else if(action==='bg-quickmatch') bgQuickMatch();
+      else if(action==='bg-createroom') bgCreateRoom();
       else if(action==='bg-joincode') bgJoinCode();
       else if(action==='bg-start') bgStart();
       else if(action==='bg-flip') bgFlip(parseInt(el.getAttribute('data-idx')));
@@ -689,8 +748,8 @@ function bindEvents(){
 }
 
 /* ============ init ============ */
-(function init(){
-  ensureIdentity();
+(async function init(){
+  await ensureIdentity();
   render();
 })();
 </script>
