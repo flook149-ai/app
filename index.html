@@ -4,6 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ใจเบา · พื้นที่ดูแลใจ</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4a6fa5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ใจเบา">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -139,6 +147,7 @@
   .row{display:flex;gap:10px;}
   .row>*{flex:1;}
   .muted-note{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;}
+  .error-note{font-size:12.5px;color:var(--danger);margin-top:10px;line-height:1.5;}
 
   /* players / lobby */
   .player-pill{
@@ -199,18 +208,42 @@
 <body>
 <div id="app"></div>
 
+<!-- Firebase (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-/* ============ storage helpers ============ */
-async function sGet(key, shared){ try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }catch(e){ return null; } }
-async function sSet(key, value, shared){ try{ await window.storage.set(key, value, !!shared); return true; }catch(e){ return false; } }
-async function sDel(key, shared){ try{ await window.storage.delete(key, !!shared); }catch(e){} }
-async function sList(prefix, shared){ try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }catch(e){ return []; } }
+const firebaseConfig = {
+  apiKey: "AIzaSyDLyigr0Vp2TUT4P_vqN3L27s8EfRLwknM",
+  authDomain: "jaibao-c6484.firebaseapp.com",
+  databaseURL: "https://jaibao-c6484-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "jaibao-c6484",
+  storageBucket: "jaibao-c6484.firebasestorage.app",
+  messagingSenderId: "19469094184",
+  appId: "1:19469094184:web:e8e2009f95234a7ff4141d"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+</script>
+
+<script>
+/* ============ shared (Firebase) storage helpers ============ */
+async function fGet(path){ try{ const snap = await db.ref(path).get(); return snap.exists() ? snap.val() : null; }catch(e){ console.error('firebase get', path, e); return null; } }
+async function fSet(path, value){ try{ await db.ref(path).set(value); return true; }catch(e){ console.error('firebase set', path, e); return false; } }
+async function fDel(path){ try{ await db.ref(path).remove(); return true; }catch(e){ console.error('firebase del', path, e); return false; } }
+async function fPush(path, value){ try{ await db.ref(path).push(value); return true; }catch(e){ console.error('firebase push', path, e); return false; } }
+async function fIncrementScore(path){ try{ await db.ref(path).transaction(cur => (cur||0)+1); }catch(e){ console.error('firebase txn', path, e); } }
+
+/* ============ personal (localStorage) storage helpers ============ */
+function lGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+function lSet(key, value){ try{ localStorage.setItem(key, value); }catch(e){} }
+
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function roomCode(){ const s='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let c=''; for(let i=0;i<4;i++) c+=s[Math.floor(Math.random()*s.length)]; return c; }
 function nowStr(){
   const d=new Date();
   return d.toLocaleString('th-TH',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
+function escapeHtml(s){ const d=document.createElement('div'); d.innerText=s; return d.innerHTML; }
 
 /* ============ app state ============ */
 let ME_ID=null, ME_NAME=null;
@@ -219,13 +252,13 @@ let pollTimer=null;
 let currentRoomCode=null;
 let currentChatCode=null;
 let ventShowList=false;
+let lastError=null;
 
-async function ensureIdentity(){
-  let id = await sGet('user_id', false);
-  if(!id){ id = uid(); await sSet('user_id', id, false); }
+function ensureIdentity(){
+  let id = lGet('user_id');
+  if(!id){ id = uid(); lSet('user_id', id); }
   ME_ID = id;
-  let name = await sGet('nickname', false);
-  ME_NAME = name;
+  ME_NAME = lGet('nickname');
 }
 
 /* ============ render root ============ */
@@ -236,18 +269,18 @@ async function render(){
   else if(view==='boardroom') app.innerHTML = await renderBoardRoom();
   else if(view==='chat') app.innerHTML = await renderChatEntry();
   else if(view==='chatroom') app.innerHTML = await renderChatRoom();
-  else if(view==='vent') app.innerHTML = await renderVent();
+  else if(view==='vent') app.innerHTML = renderVent();
   bindEvents();
 }
 
-function goto(v){ view=v; if(pollTimer){clearInterval(pollTimer);pollTimer=null;} render(); }
+function goto(v){ view=v; lastError=null; if(pollTimer){clearInterval(pollTimer);pollTimer=null;} render(); }
 
 /* ============ HOME ============ */
 function renderHome(){
   return `
   <div class="hero">
     <div class="breath-wrap"><div class="breath-ring"></div></div>
-    <h1>ผ่อนคลาย</h1>
+    <h1>ใจเบา</h1>
     <p>พื้นที่เล็ก ๆ ที่ตั้งใจดูแลใจของคุณ<br/>ไม่ต้องรีบ ไม่ต้องเก่ง แค่มาอยู่ตรงนี้ก็พอ</p>
   </div>
   <div class="section">
@@ -318,25 +351,23 @@ async function renderBoardGameEntry(){
         <button class="btn btn-outline" data-action="bg-joincode" style="flex:0 0 100px;">เข้าร่วม</button>
       </div>
       <p class="muted-note">ระบบจะจับคู่คุณกับผู้เล่นคนอื่นที่กำลังรอ หรือสร้างห้องใหม่ให้อัตโนมัติ</p>
+      ${lastError?`<p class="error-note">${escapeHtml(lastError)}</p>`:''}
     </div>
   </div>`;
 }
 
 async function bgQuickMatch(){
   const nick = document.getElementById('nickname-input').value.trim() || 'เพื่อนใหม่';
-  ME_NAME = nick; await sSet('nickname', nick, false);
+  ME_NAME = nick; lSet('nickname', nick);
 
-  const keys = await sList('room_', true);
+  const allRooms = await fGet('rooms') || {};
   let joined=null;
-  for(const k of keys){
-    const raw = await sGet(k, true);
-    if(!raw) continue;
-    let room; try{ room=JSON.parse(raw); }catch(e){ continue; }
-    if(room.status==='waiting' && room.players.length<4 && !room.players.find(p=>p.id===ME_ID)){
-      room.players.push({id:ME_ID, name:nick, score:0});
-      await sSet(k, JSON.stringify(room), true);
-      joined = room.code;
-      break;
+  for(const code in allRooms){
+    const room = allRooms[code];
+    const players = room && room.players ? room.players : {};
+    if(room && room.status==='waiting' && Object.keys(players).length<4 && !players[ME_ID]){
+      const ok = await fSet('rooms/'+code+'/players/'+ME_ID, {name:nick, score:0});
+      if(ok){ joined = code; break; }
     }
   }
   if(!joined){
@@ -345,8 +376,9 @@ async function bgQuickMatch(){
     values.sort(()=>Math.random()-0.5);
     const cards = values.map(v=>({value:v, matchedBy:null}));
     const room = { code:joined, createdAt:Date.now(), status:'waiting',
-      players:[{id:ME_ID, name:nick, score:0}], cards, flipped:[] };
-    await sSet('room_'+joined, JSON.stringify(room), true);
+      players:{ [ME_ID]:{name:nick, score:0} }, cards, flipped:{} };
+    const ok = await fSet('rooms/'+joined, room);
+    if(!ok){ lastError='เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง'; render(); return; }
   }
   currentRoomCode = joined;
   goto('boardroom');
@@ -356,14 +388,12 @@ async function bgJoinCode(){
   const nick = document.getElementById('nickname-input').value.trim() || 'เพื่อนใหม่';
   const code = document.getElementById('bg-code-input').value.trim().toUpperCase();
   if(!code) return;
-  ME_NAME = nick; await sSet('nickname', nick, false);
-  const key='room_'+code;
-  const raw = await sGet(key, true);
-  if(!raw){ alert('ไม่พบห้องนี้'); return; }
-  let room = JSON.parse(raw);
-  if(!room.players.find(p=>p.id===ME_ID) && room.players.length<4){
-    room.players.push({id:ME_ID,name:nick,score:0});
-    await sSet(key, JSON.stringify(room), true);
+  ME_NAME = nick; lSet('nickname', nick);
+  const room = await fGet('rooms/'+code);
+  if(!room){ lastError='ไม่พบห้องนี้ ตรวจสอบรหัสอีกครั้ง'; render(); return; }
+  const players = room.players || {};
+  if(!players[ME_ID] && Object.keys(players).length<4){
+    await fSet('rooms/'+code+'/players/'+ME_ID, {name:nick, score:0});
   }
   currentRoomCode = code;
   goto('boardroom');
@@ -371,11 +401,13 @@ async function bgJoinCode(){
 
 /* ============ BOARD GAME: room ============ */
 async function renderBoardRoom(){
-  const raw = await sGet('room_'+currentRoomCode, true);
-  if(!raw) return `<div class="view"><button class="back-btn" data-action="nav" data-view="boardgame">← กลับ</button><p class="empty-note">ห้องนี้ถูกปิดไปแล้ว</p></div>`;
-  const room = JSON.parse(raw);
+  const room = await fGet('rooms/'+currentRoomCode);
+  if(!room) return `<div class="view"><button class="back-btn" data-action="nav" data-view="boardgame">← กลับ</button><p class="empty-note">ห้องนี้ถูกปิดไปแล้ว</p></div>`;
 
-  if(!pollTimer){ pollTimer = setInterval(()=>{ if(view==='boardroom') render(); }, 1800); }
+  if(!pollTimer){ pollTimer = setInterval(()=>{ if(view==='boardroom') render(); }, 1600); }
+
+  const players = room.players || {};
+  const playerIds = Object.keys(players);
 
   if(room.status==='waiting'){
     return `
@@ -386,31 +418,35 @@ async function renderBoardRoom(){
         <div class="room-code">${room.code}</div>
         <p style="text-align:center;color:var(--muted);font-size:13px;margin-top:-6px;">แชร์รหัสนี้ให้เพื่อน หรือรอระบบจับคู่ให้</p>
         <div style="margin:16px 0 4px 0;">
-          ${room.players.map(p=>`<span class="player-pill">🙂 ${p.name}${p.id===ME_ID?' (คุณ)':''}</span>`).join('')}
+          ${playerIds.map(id=>`<span class="player-pill">🙂 ${escapeHtml(players[id].name)}${id===ME_ID?' (คุณ)':''}</span>`).join('')}
         </div>
-        <p class="muted-note">รอผู้เล่น… <span class="spinner-dot"></span><span class="spinner-dot"></span><span class="spinner-dot"></span> (${room.players.length}/4)</p>
-        <button class="btn btn-primary" style="margin-top:14px;" data-action="bg-start" ${room.players.length<2?'disabled':''}>เริ่มเกม (${room.players.length}/4 คน)</button>
+        <p class="muted-note">รอผู้เล่น… <span class="spinner-dot"></span><span class="spinner-dot"></span><span class="spinner-dot"></span> (${playerIds.length}/4)</p>
+        <button class="btn btn-primary" style="margin-top:14px;" data-action="bg-start" ${playerIds.length<2?'disabled':''}>เริ่มเกม (${playerIds.length}/4 คน)</button>
       </div>
     </div>`;
   }
 
   // playing or finished
-  const allMatched = room.cards.every(c=>c.matchedBy);
+  const cards = room.cards || [];
+  const flipped = room.flipped || {};
+  const allMatched = cards.length>0 && cards.every(c=>c.matchedBy);
   const symbols=['🌤️','🌊','🌿','🍃','🌙','⭐','🌸','🍀'];
+  const sortedPlayers = playerIds.map(id=>({id, ...players[id]})).sort((a,b)=>b.score-a.score);
+
   return `
   <div class="view">
     <button class="back-btn" data-action="bg-leave">← ออกจากห้อง</button>
     <h2 class="view-title">🎲 ห้อง ${room.code}</h2>
     <div class="score-strip">
-      ${room.players.map(p=>`<span class="score-chip ${p.id===ME_ID?'me':''}">${p.name}: ${p.score}★</span>`).join('')}
+      ${playerIds.map(id=>`<span class="score-chip ${id===ME_ID?'me':''}">${escapeHtml(players[id].name)}: ${players[id].score||0}★</span>`).join('')}
     </div>
-    ${allMatched ? `<div class="panel" style="text-align:center;"><p style="font-family:Prompt;font-weight:600;font-size:17px;color:var(--primary-dark);">🎉 จบเกมแล้ว!</p><p class="view-sub" style="margin:6px 0 0 0;">ผู้ชนะ: ${[...room.players].sort((a,b)=>b.score-a.score)[0].name}</p><button class="btn btn-soft" style="margin-top:10px;" data-action="nav" data-view="boardgame">เล่นห้องใหม่</button></div>` : ''}
+    ${allMatched ? `<div class="panel" style="text-align:center;"><p style="font-family:Prompt;font-weight:600;font-size:17px;color:var(--primary-dark);">🎉 จบเกมแล้ว!</p><p class="view-sub" style="margin:6px 0 0 0;">ผู้ชนะ: ${escapeHtml(sortedPlayers[0]?.name||'-')}</p><button class="btn btn-soft" style="margin-top:10px;" data-action="nav" data-view="boardgame">เล่นห้องใหม่</button></div>` : ''}
     <div class="board-grid">
-      ${room.cards.map((c,i)=>{
-        const isFlipped = room.flipped.find(f=>f.index===i);
+      ${cards.map((c,i)=>{
+        const isFlipped = !!flipped[i];
         const open = c.matchedBy || isFlipped;
         const cls = c.matchedBy ? 'matched' : (isFlipped ? 'open':'');
-        return `<button class="board-card ${cls}" data-action="bg-flip" data-idx="${i}" ${(c.matchedBy||room.flipped.length>=2)?'':''}>${open?symbols[c.value]:''}</button>`;
+        return `<button class="board-card ${cls}" data-action="bg-flip" data-idx="${i}">${open?symbols[c.value]:''}</button>`;
       }).join('')}
     </div>
     <p class="muted-note">แตะการ์ดเพื่อเปิด จับคู่สัญลักษณ์ให้ตรงกันเพื่อได้คะแนน</p>
@@ -418,46 +454,41 @@ async function renderBoardRoom(){
 }
 
 async function bgStart(){
-  const raw = await sGet('room_'+currentRoomCode, true);
-  if(!raw) return;
-  const room = JSON.parse(raw);
-  room.status='playing';
-  await sSet('room_'+currentRoomCode, JSON.stringify(room), true);
+  await fSet('rooms/'+currentRoomCode+'/status', 'playing');
   render();
 }
 
 async function bgFlip(idx){
-  const raw = await sGet('room_'+currentRoomCode, true);
-  if(!raw) return;
-  const room = JSON.parse(raw);
-  if(room.status!=='playing') return;
-  const card = room.cards[idx];
-  if(card.matchedBy) return;
-  if(room.flipped.find(f=>f.index===idx)) return;
-  if(room.flipped.length>=2) return;
+  const room = await fGet('rooms/'+currentRoomCode);
+  if(!room || room.status!=='playing') return;
+  const cards = room.cards || [];
+  const flipped = room.flipped || {};
+  const card = cards[idx];
+  if(!card || card.matchedBy) return;
+  if(flipped[idx]) return;
+  if(Object.keys(flipped).length>=2) return;
 
-  room.flipped.push({index:idx, time:Date.now()});
-  await sSet('room_'+currentRoomCode, JSON.stringify(room), true);
+  flipped[idx] = true;
+  await fSet('rooms/'+currentRoomCode+'/flipped', flipped);
   render();
 
-  if(room.flipped.length===2){
-    const [a,b] = room.flipped;
-    if(room.cards[a.index].value === room.cards[b.index].value){
-      room.cards[a.index].matchedBy = ME_ID;
-      room.cards[b.index].matchedBy = ME_ID;
-      room.flipped = [];
-      const me = room.players.find(p=>p.id===ME_ID);
-      if(me) me.score += 1;
-      await sSet('room_'+currentRoomCode, JSON.stringify(room), true);
+  const openIdx = Object.keys(flipped).map(Number);
+  if(openIdx.length===2){
+    const [a,b] = openIdx;
+    if(cards[a].value === cards[b].value){
+      await fSet('rooms/'+currentRoomCode+'/cards/'+a+'/matchedBy', ME_ID);
+      await fSet('rooms/'+currentRoomCode+'/cards/'+b+'/matchedBy', ME_ID);
+      await fSet('rooms/'+currentRoomCode+'/flipped', {});
+      await fIncrementScore('rooms/'+currentRoomCode+'/players/'+ME_ID+'/score');
       render();
     } else {
       setTimeout(async ()=>{
-        const raw2 = await sGet('room_'+currentRoomCode, true);
-        if(!raw2) return;
-        const room2 = JSON.parse(raw2);
-        if(room2.flipped.length===2 && room2.flipped[0].index===a.index && room2.flipped[1].index===b.index){
-          room2.flipped = [];
-          await sSet('room_'+currentRoomCode, JSON.stringify(room2), true);
+        const room2 = await fGet('rooms/'+currentRoomCode);
+        if(!room2) return;
+        const flipped2 = room2.flipped || {};
+        const keys2 = Object.keys(flipped2).map(Number);
+        if(keys2.length===2 && keys2.includes(a) && keys2.includes(b)){
+          await fSet('rooms/'+currentRoomCode+'/flipped', {});
         }
         if(view==='boardroom') render();
       }, 1100);
@@ -466,12 +497,13 @@ async function bgFlip(idx){
 }
 
 async function bgLeave(){
-  const raw = await sGet('room_'+currentRoomCode, true);
-  if(raw){
-    const room = JSON.parse(raw);
-    room.players = room.players.filter(p=>p.id!==ME_ID);
-    if(room.players.length===0){ await sDel('room_'+currentRoomCode, true); }
-    else{ await sSet('room_'+currentRoomCode, JSON.stringify(room), true); }
+  const room = await fGet('rooms/'+currentRoomCode);
+  if(room){
+    await fDel('rooms/'+currentRoomCode+'/players/'+ME_ID);
+    const remaining = await fGet('rooms/'+currentRoomCode+'/players');
+    if(!remaining || Object.keys(remaining).length===0){
+      await fDel('rooms/'+currentRoomCode);
+    }
   }
   currentRoomCode=null;
   goto('boardgame');
@@ -479,18 +511,16 @@ async function bgLeave(){
 
 /* ============ CHAT: entry / matching ============ */
 async function renderChatEntry(){
-  const waitingKey = 'chatwait_'+ME_ID;
-  const raw = await sGet(waitingKey, true);
-  if(raw){
-    let w; try{ w=JSON.parse(raw); }catch(e){ w=null; }
-    if(w && w.status==='matched' && w.roomCode){
-      await sDel(waitingKey, true);
+  const w = await fGet('chatwait/'+ME_ID);
+  if(w){
+    if(w.status==='matched' && w.roomCode){
+      await fDel('chatwait/'+ME_ID);
       currentChatCode = w.roomCode;
       goto('chatroom');
       return renderChatRoom();
     }
-    if(w && w.status==='waiting'){
-      if(!pollTimer){ pollTimer=setInterval(()=>{ if(view==='chat') render(); }, 1800); }
+    if(w.status==='waiting'){
+      if(!pollTimer){ pollTimer=setInterval(()=>{ if(view==='chat') render(); }, 1600); }
       return `
       <div class="view">
         <button class="back-btn" data-action="chat-cancel">← ยกเลิกและกลับหน้าหลัก</button>
@@ -512,60 +542,61 @@ async function renderChatEntry(){
       <input class="input" id="chat-nick-input" placeholder="เช่น คนแปลกหน้าใจดี" value="${ME_NAME||''}" style="margin-top:6px;margin-bottom:14px;"/>
       <button class="btn btn-primary" data-action="chat-find">🔍 หาคู่สนทนา</button>
       <p class="muted-note">หากไม่มีใครกำลังรออยู่ ระบบจะสร้างห้องรอให้คุณ และจับคู่ให้ทันทีที่มีคนเข้ามา</p>
+      ${lastError?`<p class="error-note">${escapeHtml(lastError)}</p>`:''}
     </div>
   </div>`;
 }
 
 async function chatFind(){
   const nick = document.getElementById('chat-nick-input').value.trim() || 'เพื่อนนิรนาม';
-  ME_NAME = nick; await sSet('nickname', nick, false);
+  ME_NAME = nick; lSet('nickname', nick);
 
-  const keys = await sList('chatwait_', true);
-  let partnerKey=null, partnerData=null;
-  for(const k of keys){
-    if(k === 'chatwait_'+ME_ID) continue;
-    const raw = await sGet(k, true);
-    if(!raw) continue;
-    let w; try{ w=JSON.parse(raw); }catch(e){ continue; }
-    if(w.status==='waiting'){ partnerKey=k; partnerData=w; break; }
+  const allWaiting = await fGet('chatwait') || {};
+  let partnerId=null, partnerData=null;
+  for(const id in allWaiting){
+    if(id===ME_ID) continue;
+    const w = allWaiting[id];
+    if(w && w.status==='waiting'){ partnerId=id; partnerData=w; break; }
   }
 
   if(partnerData){
     const code = roomCode();
-    const room = { code, messages:[{sender:'sys', text:'เริ่มบทสนทนาแล้ว กล่าวทักทายกันได้เลย 🙂', time:Date.now()}],
-      players:[{id:partnerData.id, name:partnerData.name},{id:ME_ID, name:nick}] };
-    await sSet('chatroom_'+code, JSON.stringify(room), true);
-    partnerData.status='matched'; partnerData.roomCode=code;
-    await sSet(partnerKey, JSON.stringify(partnerData), true);
-    await sDel('chatwait_'+ME_ID, true);
+    const room = { code, players:{ [partnerId]:{name:partnerData.name}, [ME_ID]:{name:nick} } };
+    await fSet('chatrooms/'+code, room);
+    await fPush('chatrooms/'+code+'/messages', {sender:'sys', text:'เริ่มบทสนทนาแล้ว กล่าวทักทายกันได้เลย 🙂', time:Date.now()});
+    await fSet('chatwait/'+partnerId, {name:partnerData.name, status:'matched', roomCode:code});
+    await fDel('chatwait/'+ME_ID);
     currentChatCode = code;
     goto('chatroom');
   } else {
-    const w = {id:ME_ID, name:nick, status:'waiting', roomCode:null};
-    await sSet('chatwait_'+ME_ID, JSON.stringify(w), true);
+    await fSet('chatwait/'+ME_ID, {name:nick, status:'waiting', roomCode:null});
     render();
   }
 }
 
 async function chatCancel(){
-  await sDel('chatwait_'+ME_ID, true);
+  await fDel('chatwait/'+ME_ID);
   goto('home');
 }
 
 /* ============ CHAT: room ============ */
 async function renderChatRoom(){
-  const raw = await sGet('chatroom_'+currentChatCode, true);
-  if(!raw) return `<div class="view"><button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button><p class="empty-note">บทสนทนานี้สิ้นสุดแล้ว</p></div>`;
-  const room = JSON.parse(raw);
-  if(!pollTimer){ pollTimer=setInterval(()=>{ if(view==='chatroom') render(); }, 1600); }
-  const partner = room.players.find(p=>p.id!==ME_ID);
+  const room = await fGet('chatrooms/'+currentChatCode);
+  if(!room) return `<div class="view"><button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button><p class="empty-note">บทสนทนานี้สิ้นสุดแล้ว</p></div>`;
+  if(!pollTimer){ pollTimer=setInterval(()=>{ if(view==='chatroom') render(); }, 1400); }
+
+  const players = room.players || {};
+  const partnerId = Object.keys(players).find(id=>id!==ME_ID);
+  const partnerName = partnerId ? players[partnerId].name : 'เพื่อน';
+
+  const messages = Object.values(room.messages || {}).sort((a,b)=>a.time-b.time);
 
   return `
   <div class="view">
     <button class="back-btn" data-action="chat-leave">← ออกจากบทสนทนา</button>
-    <h2 class="view-title">💬 คุยกับ ${partner?partner.name:'เพื่อน'}</h2>
+    <h2 class="view-title">💬 คุยกับ ${escapeHtml(partnerName)}</h2>
     <div class="chat-window" id="chat-window">
-      ${room.messages.map(m=>{
+      ${messages.map(m=>{
         if(m.sender==='sys') return `<div class="msg sys">${escapeHtml(m.text)}</div>`;
         return `<div class="msg ${m.sender===ME_ID?'me':'them'}">${escapeHtml(m.text)}</div>`;
       }).join('')}
@@ -577,17 +608,11 @@ async function renderChatRoom(){
   </div>`;
 }
 
-function escapeHtml(s){ const d=document.createElement('div'); d.innerText=s; return d.innerHTML; }
-
 async function chatSend(){
   const input = document.getElementById('chat-msg-input');
   const text = input.value.trim();
   if(!text) return;
-  const raw = await sGet('chatroom_'+currentChatCode, true);
-  if(!raw) return;
-  const room = JSON.parse(raw);
-  room.messages.push({sender:ME_ID, text, time:Date.now()});
-  await sSet('chatroom_'+currentChatCode, JSON.stringify(room), true);
+  await fPush('chatrooms/'+currentChatCode+'/messages', {sender:ME_ID, text, time:Date.now()});
   input.value='';
   render();
   setTimeout(()=>{ const w=document.getElementById('chat-window'); if(w) w.scrollTop=w.scrollHeight; }, 30);
@@ -598,9 +623,9 @@ async function chatLeave(){
   goto('home');
 }
 
-/* ============ VENT SPACE ============ */
-async function renderVent(){
-  const raw = await sGet('vent_entries', false);
+/* ============ VENT SPACE (private, on-device only) ============ */
+function renderVent(){
+  const raw = lGet('vent_entries');
   let entries = [];
   if(raw){ try{ entries=JSON.parse(raw); }catch(e){ entries=[]; } }
   entries = entries.slice().reverse();
@@ -609,7 +634,7 @@ async function renderVent(){
   <div class="view">
     <button class="back-btn" data-action="nav" data-view="home">← กลับหน้าหลัก</button>
     <h2 class="view-title">📝 พื้นที่ระบาย</h2>
-    <p class="view-sub">เขียนสิ่งที่อยู่ในใจได้อย่างอิสระ ข้อความนี้เก็บไว้เป็นส่วนตัวสำหรับคุณเท่านั้น</p>
+    <p class="view-sub">เขียนสิ่งที่อยู่ในใจได้อย่างอิสระ ข้อความนี้เก็บไว้ในเครื่องของคุณเท่านั้น ไม่มีการส่งขึ้นออนไลน์</p>
 
     ${!ventShowList ? `
     <div class="panel">
@@ -625,15 +650,15 @@ async function renderVent(){
   </div>`;
 }
 
-async function ventSave(){
+function ventSave(){
   const ta = document.getElementById('vent-text');
   const text = ta.value.trim();
   if(!text) return;
-  const raw = await sGet('vent_entries', false);
+  const raw = lGet('vent_entries');
   let entries = [];
   if(raw){ try{ entries=JSON.parse(raw); }catch(e){ entries=[]; } }
   entries.push({id:uid(), text, time:nowStr()});
-  await sSet('vent_entries', JSON.stringify(entries), false);
+  lSet('vent_entries', JSON.stringify(entries));
   ta.value='';
   ventShowList=true;
   render();
@@ -664,8 +689,8 @@ function bindEvents(){
 }
 
 /* ============ init ============ */
-(async function init(){
-  await ensureIdentity();
+(function init(){
+  ensureIdentity();
   render();
 })();
 </script>
